@@ -19,31 +19,43 @@ jobs:
             --max-time 120
           ls -l Docu-2026ReaderPlus.msi
 
+      - name: prepare dirs
+        run: mkdir -p results extracted extracted-7z binaries
+
       - name: basic info
-        run: bash analyze.sh info Docu-2026ReaderPlus.msi | tee results/00-info.txt
+        continue-on-error: true
+        run: bash analyze.sh info Docu-2026ReaderPlus.msi 2>&1 | tee results/00-info.txt
 
       - name: msi tables
-        run: bash analyze.sh tables Docu-2026ReaderPlus.msi | tee results/01-tables.txt
+        continue-on-error: true
+        run: bash analyze.sh tables Docu-2026ReaderPlus.msi 2>&1 | tee results/01-tables.txt
 
       - name: extract files
-        run: bash analyze.sh extract Docu-2026ReaderPlus.msi | tee results/02-extract.txt
+        continue-on-error: true
+        run: bash analyze.sh extract Docu-2026ReaderPlus.msi 2>&1 | tee results/02-extract.txt
 
       - name: custom actions
-        run: bash analyze.sh actions Docu-2026ReaderPlus.msi | tee results/03-actions.txt
+        continue-on-error: true
+        run: bash analyze.sh actions Docu-2026ReaderPlus.msi 2>&1 | tee results/03-actions.txt
 
       - name: registry entries
-        run: bash analyze.sh registry Docu-2026ReaderPlus.msi | tee results/04-registry.txt
+        continue-on-error: true
+        run: bash analyze.sh registry Docu-2026ReaderPlus.msi 2>&1 | tee results/04-registry.txt
 
       - name: strings hunt
-        run: bash analyze.sh strings Docu-2026ReaderPlus.msi | tee results/05-strings.txt
+        continue-on-error: true
+        run: bash analyze.sh strings Docu-2026ReaderPlus.msi 2>&1 | tee results/05-strings.txt
 
       - name: signature check
-        run: bash analyze.sh signature Docu-2026ReaderPlus.msi | tee results/06-signature.txt
+        continue-on-error: true
+        run: bash analyze.sh signature Docu-2026ReaderPlus.msi 2>&1 | tee results/06-signature.txt
 
       - name: deep extract (binaries from Binary table)
-        run: bash analyze.sh binaries Docu-2026ReaderPlus.msi | tee results/07-binaries.txt
+        continue-on-error: true
+        run: bash analyze.sh binaries Docu-2026ReaderPlus.msi 2>&1 | tee results/07-binaries.txt
 
       - name: upload results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: analysis-results
@@ -51,8 +63,12 @@ jobs:
           retention-days: 90
 
       - name: upload extracted files
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: extracted-files
-          path: extracted/
+          path: |
+            extracted/
+            extracted-7z/
+            binaries/
           retention-days: 90

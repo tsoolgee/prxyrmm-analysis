@@ -1,7 +1,7 @@
 #!/bin/bash
-set -euo pipefail
+set +e
 CMD="$1"; MSI="$2"
-mkdir -p results extracted binaries
+mkdir -p results extracted extracted-7z binaries
 
 case "$CMD" in
 
