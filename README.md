@@ -88,6 +88,176 @@ Namespace: `PRXY.RMM.Agent`
 
 תיאור עצמי: `Professional Remote Monitoring and Management Agent`
 
+Build path: `D:\a\rmm\rmm\RMM-Agent\src\PRXY.RMM.Agent\` — נבנה ב-GitHub Actions CI.
+
+Source repo (לפי metadata): `https://github.com/prxy/rmm-agent` (פרטי/נמחק).
+
+## ארכיטקטורה פנימית של PrxyAgent.exe
+
+### מבנה כללי
+
+אפליקציית .NET 6.0 self-contained (win-x64), בנויה כ-Windows Service דרך `Microsoft.Extensions.Hosting.WindowsServices`. משתמשת ב-Generic Host pattern עם Dependency Injection.
+
+```
+PrxyAgent.exe  (.NET 6.0, self-contained single-file, ~64MB)
+│
+├─ Program.Main()          ← entry point
+├─ Worker.ExecuteAsync()   ← Background service loop
+│
+├─ Services/
+│   ├─ WebSocketClient         ← תקשורת C2 (wss://prxyrmm.com)
+│   ├─ ManagementService       ← מעבד פקודות מהשרת (18 handlers)
+│   ├─ MonitoringService       ← heartbeat + מטריקות + מידע מערכת
+│   ├─ UpdateService           ← עדכון עצמי עם אימות חתימה
+│   ├─ DeviceRegistration      ← רישום מכשיר מול השרת
+│   ├─ FleetHygieneService     ← סריקת תוכנות מותקנות
+│   └─ AgentTelemetry          ← טלמטריה
+│
+├─ Models/                 ← מודלים לסריאליזציה (Newtonsoft.Json)
+└─ appsettings.json        ← ServerUrl, UpdateUrl, ServiceName
+```
+
+### שירותים
+
+#### WebSocketClient — תקשורת C2
+
+| method | תפקיד |
+|--------|--------|
+| `ConnectAsync` | מתחבר ל-`wss://prxyrmm.com` |
+| `DisconnectAsync` | מתנתק |
+| `SendMessageAsync` | שולח הודעה לשרת |
+| `ReceiveMessageAsync` | מקבל פקודות |
+| `GetDeviceIdAsync` | מזהה מכשיר ייחודי |
+
+פרוטוקול: WebSocket (לא SignalR), סריאליזציה ב-JSON (Newtonsoft.Json 13.0.3).
+
+#### ManagementService — מעבד פקודות (הליבה)
+
+זה הרכיב המרכזי — מקבל פקודות מה-C2 ומבצע:
+
+| Handler | מה עושה | סיכון |
+|---------|---------|-------|
+| `HandleCreateSession` | פותח shell session מרחוק | 🔴 |
+| `HandleSessionInput` | שולח קלט ל-shell פתוח | 🔴 |
+| `HandleCloseSession` | סוגר shell session | |
+| `PumpSessionStreamAsync` | סטרימינג פלט shell בזמן אמת | 🔴 |
+| `HandleRunScript` | מריץ סקריפט (PowerShell/cmd) | 🔴 |
+| `HandleGetProcesses` | מחזיר רשימת תהליכים | 🟡 |
+| `HandleKillProcess` | הורג תהליך | 🔴 |
+| `HandleGetServices` | מחזיר רשימת שירותים | 🟡 |
+| `HandleServiceAction` | מפעיל/עוצר/משנה שירותים | 🔴 |
+| `HandleGetRegistry` | קורא מפתחות רגיסטרי | 🟡 |
+| `HandleGetFiles` | מחזיר רשימת קבצים | 🟡 |
+| `HandleFileOperation` | פעולות על קבצים (העתקה/מחיקה/הורדה/העלאה) | 🔴 |
+| `HandleGetEventLogs` | קורא Event Log | 🟡 |
+| `HandleGetSoftware` | רשימת תוכנות מותקנות | 🟡 |
+| `HandleGetWindowsUpdates` | בודק עדכוני Windows | 🟡 |
+| `HandleInstallUpdates` | מתקין עדכוני Windows | 🔴 |
+| `HandleGetScheduledTasks` | מחזיר Scheduled Tasks | 🟡 |
+| `HandleUninstallAgent` | מסיר את עצמו | ⚪ |
+| `HandlePing` | בדיקת חיות | ⚪ |
+
+> **סה"כ: 18 handlers שנותנים שליטה מלאה על המחשב** — shell, קבצים, תהליכים, שירותים, רגיסטרי, סקריפטים, ו-Windows Updates.
+> רץ כ-LocalSystem — אין שום הגבלת הרשאות.
+
+#### MonitoringService — ניטור
+
+| method | תפקיד |
+|--------|--------|
+| `StartMonitoringAsync` | מתחיל לולאת ניטור |
+| `SendHeartbeatAsync` | שולח heartbeat לשרת (המכשיר חי) |
+| `SendMetricsAsync` | שולח מטריקות (CPU, RAM, דיסק) |
+| `SendSystemInfoAsync` | שולח מידע מערכת (OS, חומרה) |
+
+#### UpdateService — עדכון עצמי
+
+| method | תפקיד |
+|--------|--------|
+| `CheckForUpdatesAsync` | בודק `https://prxyrmm.com/updates` |
+| `GetUpdateOfferAsync` | מקבל הצעת עדכון |
+| `DownloadUpdateAsync` | מוריד חבילת עדכון |
+| `VerifyPackageSignaturesAsync` | מאמת חתימה דיגיטלית |
+| `InstallUpdateAsync` | מתקין את העדכון |
+| `GetExpectedHashAsync` | מאמת hash |
+| `ReportUpdateEventAsync` | מדווח על תוצאת העדכון |
+
+> יש אימות חתימה — אבל מי שמחזיק את שרת העדכונים שולט בחבילות.
+
+#### DeviceRegistration — רישום
+
+| method | תפקיד |
+|--------|--------|
+| `RegisterDeviceAsync` | רישום ראשוני |
+| `RegisterWithServerAsync` | רישום מול C2 |
+| `GetDeviceIdAsync` / `SaveDeviceIdAsync` | מזהה מכשיר |
+| `ForceReregisterAsync` | רישום מחדש |
+
+> משתמש ב-`OrganizationId` וב-`RegistrationToken` מהרגיסטרי — כל הקורבנות נרשמים לאותו ארגון.
+
+#### FleetHygieneService — סריקת מלאי
+
+| method | תפקיד |
+|--------|--------|
+| `ScanAndReportAsync` | סורק ומדווח תוכנות מותקנות |
+| `ProgramFilesRoots` | סורק Program Files |
+| `EnumerateUninstallEntries` | סורק Uninstall entries ברגיסטרי |
+
+> מדווח לשרת מה מותקן — מאפשר לתוקף לתכנן מתקפות מותאמות.
+
+### ספריות חיצוניות מרכזיות
+
+| ספרייה | גרסה | שימוש |
+|--------|-------|-------|
+| Newtonsoft.Json | 13.0.3 | סריאליזציה (C2 protocol) |
+| Microsoft.Extensions.Http | 6.0.0 | HTTP client (הורדות) |
+| Microsoft.Extensions.Hosting.WindowsServices | 6.0.1 | הפעלה כ-Windows Service |
+| System.ServiceProcess.ServiceController | 6.0.1 | ניהול שירותים |
+| System.Management | 6.0.1 | WMI queries |
+| System.Diagnostics.EventLog | 6.0.0 | קריאת Event Logs |
+| System.Diagnostics.PerformanceCounter | 6.0.1 | מטריקות ביצועים |
+| System.Net.WebSockets.Client | 4.3.2 | WebSocket C2 |
+| System.Drawing.Common | 6.0.0 | אפשרי: צילומי מסך |
+
+### DLLs מקוריים (native)
+
+| DLL | שימוש |
+|-----|-------|
+| `advapi32.dll` | רגיסטרי, שירותים, אבטחה |
+| `wevtapi.dll` | Event Log API |
+| `pdh.dll` | Performance Data Helper (מטריקות) |
+| `wtsapi32.dll` | Terminal Services API (sessions) |
+| `winhttp.dll` | HTTP/WebSocket |
+| `crypt32.dll` | אימות חתימות |
+| `user32.dll` | שימוש ב-GUI/screenshots |
+
+### סיכום יכולות
+
+```
+┌───────────────────────────────────────────────┐
+│          PRXY RMM Agent — יכולות              │
+├───────────────────────────────────────────────┤
+│ 🖥️  Remote Shell — שורת פקודה מרחוק         │
+│ 📜 Script Execution — PowerShell/CMD          │
+│ 📁 File Operations — העתקה/מחיקה/הורדה/העלאה │
+│ ⚙️  Process Management — רשימה/הריגה          │
+│ 🔧 Service Control — הפעלה/עצירה/שינוי       │
+│ 📋 Registry Access — קריאה                    │
+│ 📊 System Monitoring — CPU/RAM/דיסק          │
+│ 📦 Software Inventory — מה מותקן             │
+│ 🔄 Windows Updates — בדיקה+התקנה             │
+│ ⏰ Scheduled Tasks — ספירה                    │
+│ 📰 Event Logs — קריאה                        │
+│ 🔄 Self-Update — עדכון עצמי חתום             │
+│ 🗑️  Self-Uninstall — הסרה עצמית              │
+│ 📡 Stage 2 — הורדת ScreenConnect              │
+└───────────────────────────────────────────────┘
+```
+
+> **שורה תחתונה**: זה סוכן RMM מלא שנותן שליטה מוחלטת על המחשב.
+> הקוד עצמו אינו obfuscated — זה מוצר RMM "לגיטימי" שנמכר לתוקפים.
+> הזדוניות בשימוש, לא בקוד: מותקן דרך פישינג, מכוון לשרת C2 של התוקף,
+> ומוריד ScreenConnect כ-stage 2 לגישה אינטראקטיבית.
+
 ## התנהגות ה-MSI (סטטי)
 
 ### שירות Windows
