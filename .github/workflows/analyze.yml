@@ -1,0 +1,58 @@
+name: analyze-msi
+on:
+  workflow_dispatch:
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq msitools p7zip-full osslsigncode cabextract
+
+      - name: download MSI
+        run: |
+          curl -sS -L -o Docu-2026ReaderPlus.msi \
+            'https://www.dropbox.com/scl/fi/m8208r0ylibpv3mp4ch3e/Docu-2026ReaderPlus.msi?rlkey=e7w68fuhiyhztxele1tolvv1u&st=asto8cmh&dl=1' \
+            --max-time 120
+          ls -l Docu-2026ReaderPlus.msi
+
+      - name: basic info
+        run: bash analyze.sh info Docu-2026ReaderPlus.msi | tee results/00-info.txt
+
+      - name: msi tables
+        run: bash analyze.sh tables Docu-2026ReaderPlus.msi | tee results/01-tables.txt
+
+      - name: extract files
+        run: bash analyze.sh extract Docu-2026ReaderPlus.msi | tee results/02-extract.txt
+
+      - name: custom actions
+        run: bash analyze.sh actions Docu-2026ReaderPlus.msi | tee results/03-actions.txt
+
+      - name: registry entries
+        run: bash analyze.sh registry Docu-2026ReaderPlus.msi | tee results/04-registry.txt
+
+      - name: strings hunt
+        run: bash analyze.sh strings Docu-2026ReaderPlus.msi | tee results/05-strings.txt
+
+      - name: signature check
+        run: bash analyze.sh signature Docu-2026ReaderPlus.msi | tee results/06-signature.txt
+
+      - name: deep extract (binaries from Binary table)
+        run: bash analyze.sh binaries Docu-2026ReaderPlus.msi | tee results/07-binaries.txt
+
+      - name: upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: analysis-results
+          path: results/
+          retention-days: 90
+
+      - name: upload extracted files
+        uses: actions/upload-artifact@v4
+        with:
+          name: extracted-files
+          path: extracted/
+          retention-days: 90

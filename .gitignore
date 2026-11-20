@@ -1,0 +1,10 @@
+*.msi
+*.exe
+*.dll
+*.cab
+*.zip
+extracted/
+extracted-7z/
+binaries/
+results/
+*.pem
