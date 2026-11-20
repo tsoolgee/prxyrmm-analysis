@@ -1,0 +1,14 @@
+=== Registry table ===
+Registry	Root	Key	Name	Value	Component_
+s72	i2	l255	L255	L0	s72
+Registry	Registry
+regE19A3CE14D12B5A291F807F804DF9561	2	SOFTWARE\PRXY TECHNOLOGIES\PRXY RMM Agent	OrganizationId	[ORGANIZATIONID]	OrgConfiguration
+reg1F1542905BD7B4BC5BE95C8C4EE95A0F	1	Software\PRXY TECHNOLOGIES\PRXY RMM Agent	installed	#1	ApplicationShortcut
+regA36CC18695485C976CE663A9B9D33A7A	2	SOFTWARE\PRXY TECHNOLOGIES\PRXY RMM Agent	RegistrationToken	[REGISTRATIONTOKEN]	OrgConfiguration
+reg1162BD0F1EAE1D27F1888FFF55DA5E3F	2	SOFTWARE\PRXY TECHNOLOGIES\PRXY RMM Agent	+		OrgConfiguration
+
+=== RemoveRegistry ===
+(no RemoveRegistry)
+
+=== Environment ===
+(no Environment)

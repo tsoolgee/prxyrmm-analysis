@@ -1,0 +1,54 @@
+=== File info ===
+-rw-r--r-- 1 runner runner 30019584 Nov 20 05:20 Docu-2026ReaderPlus.msi
+Docu-2026ReaderPlus.msi: Composite Document File V2 Document, Little Endian, Os: Windows, Version 6.2, MSI Installer, Code page: 1252, Title: Installation Database, Subject: Docu-2026ReaderPlus, Author: PRXY TECHNOLOGIES LLC, Keywords: Installer, Comments: This installer database contains the logic and data required to install Docu-2026ReaderPlus., Template: x64;1033, Revision Number: {57EAA095-2339-42A8-B547-0377DFAFA7FB}, Create Time/Date: Fri Nov 13 14:01:50 2026, Last Saved Time/Date: Fri Nov 13 14:01:50 2026, Number of Pages: 200, Number of Words: 2, Name of Creating Application: Windows Installer XML Toolset (3.14.1.8722), Security: 2
+
+=== Hashes ===
+e95bb197a0b40156416720b33b94da2f5035007d9914e43ff2d335666b88ab03  Docu-2026ReaderPlus.msi
+eaf548351f83fbccf7a12b963f777fd3da474d21  Docu-2026ReaderPlus.msi
+884b76149e5460ca33d245786c6c9a60  Docu-2026ReaderPlus.msi
+
+=== MSI summary (msiinfo suminfo) ===
+Title: Installation Database
+Subject: Docu-2026ReaderPlus
+Author: PRXY TECHNOLOGIES LLC
+Keywords: Installer
+Comments: This installer database contains the logic and data required to install Docu-2026ReaderPlus.
+Template: x64;1033
+Revision number (UUID): {57EAA095-2339-42A8-B547-0377DFAFA7FB}
+Created: Fri Nov 13 14:01:50 2026
+Last saved: Fri Nov 13 14:01:50 2026
+Version: 200 (c8)
+Source: 2 (2)
+Application: Windows Installer XML Toolset (3.14.1.8722)
+Security: 2 (2)
+
+=== MSI tables list ===
+_SummaryInformation
+_ForceCodepage
+_Validation
+AdminExecuteSequence
+AdminUISequence
+AdvtExecuteSequence
+Binary
+Component
+Directory
+CustomAction
+Error
+Feature
+FeatureComponents
+File
+Icon
+InstallExecuteSequence
+InstallUISequence
+LaunchCondition
+Media
+Property
+MsiFileHash
+Registry
+RemoveFile
+SecureObjects
+ServiceConfig
+ServiceControl
+ServiceInstall
+Shortcut
+Upgrade

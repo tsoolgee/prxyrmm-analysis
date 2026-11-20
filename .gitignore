@@ -6,5 +6,5 @@
 extracted/
 extracted-7z/
 binaries/
-results/
+analysis-results/
 *.pem

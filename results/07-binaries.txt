@@ -1,0 +1,26 @@
+=== Extracting Binary table streams ===
+Binary: WixCA
+
+=== Using 7z to find CAB streams ===
+
+=== Binary streams from 7z extraction ===
+extracted-7z/PrxyAgent.exe                                             67169656  PE32+ executable for MS Windows 6.00 (console), x86-64, 10 sections
+extracted-7z/appsettings.json                                               288  JSON text data
+
+=== Decoded PowerShell from CustomAction (if base64) ===
+
+=== Looking for embedded scripts in Binary table blobs ===
+--- TEXT: extracted-7z/appsettings.json ---
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "ServerUrl": "wss://prxyrmm.com",
+  "UpdateUrl": "https://prxyrmm.com/updates",
+  "ServiceName": "PRXY RMM Agent"
+}
+
