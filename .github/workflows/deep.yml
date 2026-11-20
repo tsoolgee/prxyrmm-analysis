@@ -1,0 +1,115 @@
+name: deep-analysis
+on:
+  workflow_dispatch:
+jobs:
+  deep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq msitools p7zip-full
+
+      - name: download and extract
+        run: |
+          curl -sS -L -o Docu-2026ReaderPlus.msi \
+            'https://www.dropbox.com/scl/fi/m8208r0ylibpv3mp4ch3e/Docu-2026ReaderPlus.msi?rlkey=e7w68fuhiyhztxele1tolvv1u&st=asto8cmh&dl=1' \
+            --max-time 120
+          mkdir -p extracted
+          cd extracted && msiextract ../Docu-2026ReaderPlus.msi
+          ls -la "PRXY TECHNOLOGIES/PrxyAgent/"
+
+      - name: dotnet namespace map
+        run: |
+          mkdir -p deep
+          echo "=== All PRXY.* type names ===" | tee deep/01-types.txt
+          strings -n 10 "extracted/PRXY TECHNOLOGIES/PrxyAgent/PrxyAgent.exe" \
+            | grep -E '^PRXY\.' | sort -u | tee -a deep/01-types.txt
+          echo "" | tee -a deep/01-types.txt
+          echo "=== Async state machines (d__N = async methods) ===" | tee -a deep/01-types.txt
+          strings "extracted/PRXY TECHNOLOGIES/PrxyAgent/PrxyAgent.exe" \
+            | grep -E 'PRXY.*\+<.*>d__' | sort -u | tee -a deep/01-types.txt
+
+      - name: api endpoints and urls
+        run: |
+          echo "=== All URLs ===" | tee deep/02-urls.txt
+          strings "extracted/PRXY TECHNOLOGIES/PrxyAgent/PrxyAgent.exe" \
+            | grep -oE 'https?://[^ ">{},]+' | sort -u | tee -a deep/02-urls.txt
+          echo "" | tee -a deep/02-urls.txt
+          echo "=== WebSocket URLs ===" | tee -a deep/02-urls.txt
+          strings "extracted/PRXY TECHNOLOGIES/PrxyAgent/PrxyAgent.exe" \
+            | grep -oE 'wss?://[^ ">{},]+' | sort -u | tee -a deep/02-urls.txt
+          echo "" | tee -a deep/02-urls.txt
+          echo "=== API paths (/api/) ===" | tee -a deep/02-urls.txt
+          strings "extracted/PRXY TECHNOLOGIES/PrxyAgent/PrxyAgent.exe" \
+            | grep -iE '/api/|/endpoint|/agent|/device|/command|/task|/download|/upload|/register|/update|/status|/heartbeat|/connect|/proxy|/tunnel|/shell|/exec|/screen|/file|/process|/service|/install|/uninstall|/autopush' \
+            | sort -u | head -200 | tee -a deep/02-urls.txt
+
+      - name: command and capability strings
+        run: |
+          echo "=== Potential commands/capabilities ===" | tee deep/03-commands.txt
+          strings -n 6 "extracted/PRXY TECHNOLOGIES/PrxyAgent/PrxyAgent.exe" \
+            | grep -iE '(shell|terminal|cmd|powershell|execute|command|screenshot|screen.?capture|keylog|clipboard|webcam|microphone|file.?manager|file.?browser|download.?file|upload.?file|transfer|remote.?desktop|vnc|rdp|reverse|socks|proxy|tunnel|port.?forward|persist|autorun|startup|schedule|cron|watchdog|update|upgrade|self.?update|uninstall|reinstall|kill|terminate|reboot|shutdown|lock|logoff|sleep|beacon|heartbeat|checkin|check.?in|ping|alive|interval|jitter|encrypt|decrypt|exfil|steal|credential|password|cookie|browser.?data|token|registry|wmi|service|driver|inject|hollow|migrate|escalat|privilege|bypass|amsi|etw|defender|av|edr|disable|tamper)' \
+            | sort -u | head -300 | tee -a deep/03-commands.txt
+
+      - name: json and config patterns
+        run: |
+          echo "=== JSON property names (C2 protocol hints) ===" | tee deep/04-protocol.txt
+          strings "extracted/PRXY TECHNOLOGIES/PrxyAgent/PrxyAgent.exe" \
+            | grep -oE '"[a-zA-Z_][a-zA-Z0-9_]{2,30}"' | sort | uniq -c | sort -rn | head -200 | tee -a deep/04-protocol.txt
+          echo "" | tee -a deep/04-protocol.txt
+          echo "=== SignalR / WebSocket hub methods ===" | tee -a deep/04-protocol.txt
+          strings "extracted/PRXY TECHNOLOGIES/PrxyAgent/PrxyAgent.exe" \
+            | grep -iE '(signalr|hubconnection|hub\.invoke|hub\.on|SendAsync|InvokeAsync|\.On\(|HubConnection)' | sort -u | head -50 | tee -a deep/04-protocol.txt
+
+      - name: embedded resources and assemblies
+        run: |
+          echo "=== .NET assembly names inside single-file ===" | tee deep/05-assemblies.txt
+          strings "extracted/PRXY TECHNOLOGIES/PrxyAgent/PrxyAgent.exe" \
+            | grep -E '\.(dll|exe)$' | sort -u | tee -a deep/05-assemblies.txt
+          echo "" | tee -a deep/05-assemblies.txt
+          echo "=== NuGet package references ===" | tee -a deep/05-assemblies.txt
+          strings "extracted/PRXY TECHNOLOGIES/PrxyAgent/PrxyAgent.exe" \
+            | grep -iE '(Microsoft\.|System\.|Newtonsoft|SignalR|Grpc|MediatR|Serilog|NLog|Quartz|Hangfire|ScreenConnect|ConnectWise|AnyDesk|TeamViewer|RustDesk)' \
+            | grep -vE '(xmlns|http|schema|annotation)' \
+            | sort -u | head -200 | tee -a deep/05-assemblies.txt
+
+      - name: process and system interaction
+        run: |
+          echo "=== Process/system interaction ===" | tee deep/06-system.txt
+          strings -n 8 "extracted/PRXY TECHNOLOGIES/PrxyAgent/PrxyAgent.exe" \
+            | grep -iE '(Process\.Start|ProcessStartInfo|CreateProcess|ShellExecute|WMI|ManagementObject|Win32_|ServiceController|RegistryKey|Environment\.|GetEnvironmentVariable|MachineName|UserName|OSVersion|GetFolderPath|SpecialFolder|ProgramFiles|AppData|TEMP|SystemRoot|COMSPEC)' \
+            | sort -u | head -100 | tee -a deep/06-system.txt
+          echo "" | tee -a deep/06-system.txt
+          echo "=== Network classes ===" | tee -a deep/06-system.txt
+          strings "extracted/PRXY TECHNOLOGIES/PrxyAgent/PrxyAgent.exe" \
+            | grep -iE '(HttpClient|WebClient|WebSocket|TcpClient|TcpListener|UdpClient|Socket|NetworkStream|SslStream|WebRequest|HttpWebRequest|FtpWebRequest)' \
+            | sort -u | head -50 | tee -a deep/06-system.txt
+
+      - name: screenconnect and rmm references
+        run: |
+          echo "=== ScreenConnect / RMM references ===" | tee deep/07-rmm.txt
+          strings "extracted/PRXY TECHNOLOGIES/PrxyAgent/PrxyAgent.exe" \
+            | grep -iE '(screenconnect|connectwise|control\.exe|ScreenConnect\.Client|ScreenConnect\.Windows|autopush|sczip|relay|gracioushope|msiexec|/qn|/norestart|silent.?install)' \
+            | sort -u | tee -a deep/07-rmm.txt
+          echo "" | tee -a deep/07-rmm.txt
+          echo "=== curl / download patterns ===" | tee -a deep/07-rmm.txt
+          strings "extracted/PRXY TECHNOLOGIES/PrxyAgent/PrxyAgent.exe" \
+            | grep -iE '(curl|wget|Invoke-WebRequest|Start-BitsTransfer|certutil|bitsadmin|DownloadFile|DownloadString|DownloadData|WebClient\.Download)' \
+            | sort -u | tee -a deep/07-rmm.txt
+
+      - name: full PRXY strings context
+        run: |
+          echo "=== All strings containing 'prxy' (case insensitive) ===" | tee deep/08-prxy-all.txt
+          strings "extracted/PRXY TECHNOLOGIES/PrxyAgent/PrxyAgent.exe" \
+            | grep -i 'prxy' | sort -u | tee -a deep/08-prxy-all.txt
+
+      - name: upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deep-results
+          path: deep/
+          retention-days: 90
